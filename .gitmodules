@@ -1,0 +1,36 @@
+[submodule "third_party/litex"]
+	path = third_party/litex
+	url = https://github.com/antmicro/litex.git
+[submodule "third_party/liteeth"]
+	path = third_party/liteeth
+	url = https://github.com/enjoy-digital/liteeth.git
+[submodule "third_party/litevideo"]
+	path = third_party/litevideo
+	url = https://github.com/antmicro/litevideo.git
+[submodule "third_party/nmigen"]
+	path = third_party/nmigen
+	url = https://github.com/nmigen/nmigen.git
+[submodule "litesata"]
+	path = litesata
+	url = https://github.com/enjoy-digital/litesata.git
+[submodule "third_party/pythondata-cpu-vexriscv"]
+	path = third_party/pythondata-cpu-vexriscv
+	url = https://github.com/litex-hub/pythondata-cpu-vexriscv
+[submodule "third_party/pythondata-software-compiler_rt"]
+	path = third_party/pythondata-software-compiler_rt
+	url = https://github.com/litex-hub/pythondata-software-compiler_rt.git
+[submodule "third_party/migen"]
+	path = third_party/migen
+	url = https://github.com/m-labs/migen
+[submodule "third_party/litedram"]
+	path = third_party/litedram
+	url = https://github.com/enjoy-digital/litedram
+[submodule "third_party/pythondata-software-picolibc"]
+	path = third_party/pythondata-software-picolibc
+	url = https://github.com/litex-hub/pythondata-software-picolibc.git
+[submodule "third_party/meson"]
+	path = third_party/meson
+	url = https://github.com/mesonbuild/meson.git
+[submodule "third_party/liteiclink"]
+	path = third_party/liteiclink
+	url = https://github.com/enjoy-digital/liteiclink.git

@@ -1,0 +1,11 @@
+export PATH="${PWD}/third_party/litex/litex/tools:$PATH"
+export PATH="${PWD}/tools/conda/bin:$PATH"
+export PATH="${PWD}:$PATH"
+
+directories=(litedram liteeth liteiclink litescope litevideo litex migen nmigen pythondata-cpu-vexriscv pythondata-software-compiler_rt pythondata-software-picolibc meson)
+
+export PYTHONPATH="${PWD}:$PYTHONPATH"
+for directory in "${directories[@]}";
+do
+    export PYTHONPATH="$PYTHONPATH:${PWD}/third_party/$directory"
+done
