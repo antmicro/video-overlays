@@ -4,7 +4,7 @@
 # This file is part of LiteX-Boards.
 #
 # Copyright (c) 2015-2019 Florent Kermarrec <florent@enjoy-digital.fr>
-# Copyright (c) 2020 Antmicro <www.antmicro.com>
+# Copyright (c) 2020-2022 Antmicro <www.antmicro.com>
 # SPDX-License-Identifier: BSD-2-Clause
 
 import os
@@ -12,21 +12,17 @@ import argparse
 
 from migen import *
 
-from platforms import digilent_arty
+from litex_boards.targets.digilent_arty import BaseSoC
 from litex.build.xilinx.vivado import vivado_build_args, vivado_build_argdict
+from litex.build.generic_platform import *
 
-from litex.soc.cores.clock import *
 from litex.soc.integration.soc import SoCRegion
 from litex.soc.integration.soc_core import *
 from litex.soc.integration.builder import *
-from litex.soc.cores.led import LedChaser
-from litex.soc.cores.gpio import GPIOTristate
 from litex.soc.cores.bitbang import I2CMaster
 from litex.soc.cores.ov2640 import OV2640
 from litex.soc.interconnect.stream import SyncFIFO
 
-from litedram.modules import MT41K128M16
-from litedram.phy import s7ddrphy
 from litevideo.output import VideoOut
 
 from litex.soc.cores.gpu import *
@@ -34,40 +30,50 @@ from litex.soc.cores.fastvdma.fastvdma_reader import *
 from litex.soc.cores.fastvdma.fastvdma_writer import *
 from litex.soc.cores.fastvdma.fastvdma_ov2640 import *
 
-from liteeth.phy.mii import LiteEthPHYMII
 
-# CRG ----------------------------------------------------------------------------------------------
+# Platform description for HDMI connector on Expansion Board ---------------------------------------
+def hdmi_pmod_io():
+    return[
+        ("hdmi_out", 0,
+            Subsignal("clk_p",   Pins("T13"), IOStandard("TMDS_33")), # JC9
+            Subsignal("clk_n",   Pins("U13"), IOStandard("TMDS_33")), # JC10
+            Subsignal("data0_p", Pins("U12"), IOStandard("TMDS_33")), # JC1
+            Subsignal("data0_n", Pins("V12"), IOStandard("TMDS_33")), # JC2
+            Subsignal("data1_p", Pins("V10"), IOStandard("TMDS_33")), # JC3
+            Subsignal("data1_n", Pins("V11"), IOStandard("TMDS_33")), # JC4
+            Subsignal("data2_p", Pins("U14"), IOStandard("TMDS_33")), # JC7
+            Subsignal("data2_n", Pins("V14"), IOStandard("TMDS_33")), # JC8
+        ),
+    ]
+_hdmi_pmod_io = hdmi_pmod_io()
 
-class _CRG(Module):
-    def __init__(self, platform, sys_clk_freq):
-        self.rst = Signal()
-        self.clock_domains.cd_sys       = ClockDomain()
-        self.clock_domains.cd_sys4x     = ClockDomain(reset_less=True)
-        self.clock_domains.cd_sys4x_dqs = ClockDomain(reset_less=True)
-        self.clock_domains.cd_idelay    = ClockDomain()
-        self.clock_domains.cd_eth       = ClockDomain()
-        self.clock_domains.cd_clk100    = ClockDomain()
-        # # #
+# Platform description for OV2640 cameras with I2C multiplexer on Expansion Board ------------------
+def double_ov2640_pmod_io():
+    return [
+        ("ov2640", 0,
+            Subsignal("data",   Pins("pmoda:3 pmodb:4 pmodb:1 pmodb:0 pmoda:7 pmoda:6 pmoda:1 pmoda:5"), IOStandard("LVCMOS33")),
+            Subsignal("pclk",   Pins("pmoda:2"), IOStandard("LVCMOS33")),
+            Subsignal("href",   Pins("pmoda:0"), IOStandard("LVCMOS33")),
+            Subsignal("vsync",  Pins("pmoda:4"), IOStandard("LVCMOS33")),
+        ),
+        ("ov2640", 1,
+            Subsignal("data",   Pins("pmodd:5 pmodd:6 pmodd:3 pmodd:2 pmodd:1 pmodd:0 pmodb:3 pmodb:6"), IOStandard("LVCMOS33")),
+            Subsignal("pclk",   Pins("pmodd:4"), IOStandard("LVCMOS33")),
+            Subsignal("href",   Pins("pmodb:2"), IOStandard("LVCMOS33")),
+            Subsignal("vsync",  Pins("pmodb:5"), IOStandard("LVCMOS33")),
+        ),
+        ("i2c_pmod", 0,
+            Subsignal("scl",    Pins("pmodb:7"), IOStandard("LVCMOS33")),
+            Subsignal("sda",    Pins("pmodd:7"), IOStandard("LVCMOS33")),
+        )
+]
+_double_ov2640_pmod_io = double_ov2640_pmod_io()
 
-        self.submodules.pll = pll = S7PLL(speedgrade=-1)
-        self.comb += pll.reset.eq(~platform.request("cpu_reset") | self.rst)
-        pll.register_clkin(platform.request("clk100"), 100e6)
-        pll.create_clkout(self.cd_sys,       sys_clk_freq)
-        pll.create_clkout(self.cd_sys4x,     4*sys_clk_freq)
-        pll.create_clkout(self.cd_sys4x_dqs, 4*sys_clk_freq, phase=90)
-        pll.create_clkout(self.cd_idelay,    200e6)
-        pll.create_clkout(self.cd_eth,       25e6)
-        pll.create_clkout(self.cd_clk100,    100e6)
-        platform.add_false_path_constraints(self.cd_sys.clk, pll.clkin) # Ignore sys_clk to pll.clkin path created by SoC's rst.
 
-        self.submodules.idelayctrl = S7IDELAYCTRL(self.cd_idelay)
+# ArtySoC ------------------------------------------------------------------------------------------
 
-        self.comb += platform.request("eth_ref_clk").eq(self.cd_eth.clk)
-
-# BaseSoC ------------------------------------------------------------------------------------------
-
-class BaseSoC(SoCCore):
-    csr_map = {**SoCCore.csr_map, **{
+class ArtySoC(BaseSoC):
+    csr_map = {**BaseSoC.csr_map, **{
         "i2c_pmod":    0,            # addr: 0xf0000000
         "fastvdma_ov2640_left":  1,  # addr: 0xf0000800
         "fastvdma_ov2640_right": 2,  # addr: 0xf0001000
@@ -81,7 +87,7 @@ class BaseSoC(SoCCore):
         "gpu_dma_r2": 10,            # addr: 0xf0005000
         "gpu_dma_w":  11,            # addr: 0xf0005800
     }}
-    interrupt_map = {**SoCCore.interrupt_map, **{
+    interrupt_map = {**BaseSoC.interrupt_map, **{
         "uart":       0,
         "timer0":     1,
         "ethmac":     2,
@@ -91,7 +97,7 @@ class BaseSoC(SoCCore):
         "gpu_dma_r2": 6,
         "gpu_dma_w":  7,
     }}
-    mem_map = {**SoCCore.mem_map, **{
+    mem_map = {**BaseSoC.mem_map, **{
         "rom":                   0x00000000,
         "sram":                  0x10000000,
         "main_ram":              0x40000000,
@@ -103,70 +109,36 @@ class BaseSoC(SoCCore):
         "gpu_dma_w":             0x8000e000,
         "csr":                   0xf0000000,
     }}
+    def __init__(self, **kwargs):
+        BaseSoC.__init__(self, **kwargs)
 
-    def __init__(self, variant="a7-35", toolchain="vivado", sys_clk_freq=int(100e6),
-                 with_ethernet=False, with_etherbone=False, eth_ip="192.168.1.50",
-                 eth_dynamic_ip=False, ident_version=True, with_led_chaser=True, **kwargs):
-        platform = digilent_arty.Platform(variant=variant, toolchain=toolchain)
-
-        # SoCCore ----------------------------------------------------------------------------------
-        SoCCore.__init__(self, platform, sys_clk_freq,
-            ident          = "LiteX SoC on Arty A7",
-            ident_version  = ident_version,
-            **kwargs)
-
-        # CRG --------------------------------------------------------------------------------------
-        self.submodules.crg = _CRG(platform, sys_clk_freq)
-
-        # DDR3 SDRAM -------------------------------------------------------------------------------
-        if not self.integrated_main_ram_size:
-            self.submodules.ddrphy = s7ddrphy.A7DDRPHY(platform.request("ddram"),
-                memtype        = "DDR3",
-                nphases        = 4,
-                sys_clk_freq   = sys_clk_freq)
-            self.add_sdram("sdram",
-                phy           = self.ddrphy,
-                module        = MT41K128M16(sys_clk_freq, "1:4"),
-                l2_cache_size = kwargs.get("l2_size", 8192),
-                l2_cache_reverse = False,
-            )
-
-        # Ethernet / Etherbone ---------------------------------------------------------------------
-        if with_ethernet or with_etherbone:
-            self.submodules.ethphy = LiteEthPHYMII(
-                clock_pads = self.platform.request("eth_clocks"),
-                pads       = self.platform.request("eth"))
-            if with_ethernet:
-                self.add_ethernet(phy=self.ethphy, dynamic_ip=eth_dynamic_ip)
-            if with_etherbone:
-                self.add_etherbone(phy=self.ethphy, ip_address=eth_ip)
-
-        # Leds -------------------------------------------------------------------------------------
-        if with_led_chaser:
-            self.submodules.leds = LedChaser(
-                pads         = platform.request_all("user_led"),
-                sys_clk_freq = sys_clk_freq)
+        self.clock_domains.cd_clk100 = ClockDomain()
+        self.crg.pll.create_clkout(self.cd_clk100, 100e6)
 
         # OV2640 Cameras ---------------------------------------------------------------------------
-        self.platform.add_extension(digilent_arty._double_ov2640_pmod_io)
+        self.platform.add_extension(_double_ov2640_pmod_io)
+        self.platform.add_extension(_hdmi_pmod_io)
 
         self.submodules.i2c_pmod = I2CMaster(self.platform.request("i2c_pmod"))
 
         # Left camera DMA reader (camera -> memory)
-        self.submodules.fastvdma_ov2640_left = fastvdma_ov2640_left = FastVDMA_OV2640(platform)
+        self.submodules.fastvdma_ov2640_left = fastvdma_ov2640_left = FastVDMA_OV2640(self.platform)
         self.bus.add_slave("fastvdma_slave_control_1", self.fastvdma_ov2640_left.wb_slave_control, SoCRegion(origin=0x8000a000, size=0x00001000, cached=False))
         self.bus.add_master(name="fastvdma_master_writer_1", master=fastvdma_ov2640_left.wb_master_writer)
 
         # Right camera DMA reader (camera -> memory)
-        self.submodules.fastvdma_ov2640_right = fastvdma_ov2640_right = FastVDMA_OV2640(platform)
+        self.submodules.fastvdma_ov2640_right = fastvdma_ov2640_right = FastVDMA_OV2640(self.platform)
         self.bus.add_slave("fastvdma_slave_control_2", self.fastvdma_ov2640_right.wb_slave_control, SoCRegion(origin=0x8000b000, size=0x00001000, cached=False))
         self.bus.add_master(name="fastvdma_master_writer_2", master=fastvdma_ov2640_right.wb_master_writer)
 
         # Left camera signals synchronization
-        self.submodules.ov2640_left = OV2640(self.platform.request("ov2640", number=0), fastvdma_ov2640_left.io_sync_readerBusy, leds_pads=platform.request("rgb_led", number=0))
+        self.submodules.ov2640_left = OV2640(self.platform.request("ov2640", number=0), fastvdma_ov2640_left.io_sync_readerBusy, leds_pads=self.platform.request("rgb_led", number=0))
 
         # Right camera signals synchronization
         self.submodules.ov2640_right = OV2640(self.platform.request("ov2640", number=1), fastvdma_ov2640_right.io_sync_readerBusy)
+
+        self.platform.add_platform_command("set_property CLOCK_DEDICATED_ROUTE FALSE [get_nets ov2640_left_pclk_clk]")
+        self.platform.add_platform_command("set_property CLOCK_DEDICATED_ROUTE FALSE [get_nets ov2640_right_pclk_clk]")
 
         # Connect camera to DMA
         self.comb += [
@@ -196,8 +168,8 @@ class BaseSoC(SoCCore):
         self.specials += Instance("BUFG", i_I=self.crg.cd_sys.clk, o_O=self.cd_hdmi.clk)
 
         self.submodules.framebuffer = framebuffer = ClockDomainsRenamer("hdmi")(VideoOut(
-            device    = platform.device,
-            pads      = platform.request("hdmi_out"),
+            device    = self.platform.device,
+            pads      = self.platform.request("hdmi_out"),
             dram_port = dram_port,
             fifo_depth= 1024))
 
@@ -208,14 +180,14 @@ class BaseSoC(SoCCore):
         ]
 
         clocking = framebuffer.driver.clocking
-        platform.add_period_constraint(clocking.cd_pix.clk,   1e9/31.5e6)
-        platform.add_period_constraint(clocking.cd_pix5x.clk, 1e9/(5*31.5e6))
-        platform.add_false_path_constraints(
+        self.platform.add_period_constraint(clocking.cd_pix.clk,   1e9/31.5e6)
+        self.platform.add_period_constraint(clocking.cd_pix5x.clk, 1e9/(5*31.5e6))
+        self.platform.add_false_path_constraints(
             self.crg.cd_sys.clk,
             framebuffer.driver.clocking.cd_pix.clk,
             framebuffer.driver.clocking.cd_pix5x.clk)
 
-         # -| FastVDMA RAM reader 1 |---------------------------------------------------------------
+        # -| FastVDMA RAM reader 1 |----------------------------------------------------------------
         self.submodules.gpu_dma_r1 = FastVDMAReader(self.platform)
 
         # Attach FastVDMA's frontends to Wishbone bus
@@ -278,7 +250,7 @@ def main():
 
     assert not (args.with_etherbone and args.eth_dynamic_ip)
 
-    soc = BaseSoC(
+    soc = ArtySoC(
         variant        = args.variant,
         toolchain      = args.toolchain,
         sys_clk_freq   = int(float(args.sys_clk_freq)),
