@@ -1,0 +1,83 @@
+name: Build LiteX & software binary
+on:
+  [push, pull_request, workflow_dispatch]
+
+jobs:
+  build-litex:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Clone repository
+      uses: actions/checkout@v2
+      with:
+        submodules: recursive
+
+    - name: Setup Python
+      uses: actions/setup-python@v2
+
+    - name: Install required packages
+      run: |
+        sudo apt-get -qq -y update
+        sudo apt-get -qq -y install make libevent-dev libjson-c-dev build-essential libtinfo-dev wget bzip2 ninja-build
+
+    - name: Setup environment
+      run: |
+        ./install.sh
+        chmod +x meson
+
+    - name: Build LiteX software
+      run: |
+        source ./init
+        python3 targets/digilent_arty.py --with-ethernet --eth-ip 192.0.2.1 --timer-uptime --csr-data-width 8 --uart-baudrate 1843200 --csr-csv csr.csv
+
+  build-software:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Setup Python
+      uses: actions/setup-python@v2
+
+    - name: Install dependencies
+      run: |
+        wget https://apt.kitware.com/kitware-archive.sh
+        sudo bash kitware-archive.sh
+        sudo apt install --no-install-recommends git cmake ninja-build gperf ccache dfu-util device-tree-compiler wget python3-dev python3-pip python3-setuptools python3-tk python3-wheel xz-utils file make gcc gcc-multilib g++-multilib libsdl2-dev
+        cmake --version
+        python3 --version
+        dtc --version
+
+    - name: Get Zephyr & Install Python dependencies
+      run: |
+        pip3 install --user -U west
+        echo 'export PATH=~/.local/bin:"$PATH"' >> ~/.bashrc
+        source ~/.bashrc
+        west init ~/zephyrproject
+        cd ~/zephyrproject
+        west update
+        west zephyr-export
+        pip3 install --user -r ~/zephyrproject/zephyr/scripts/requirements.txt
+
+    - name: Install Zephyr toolchain
+      run: |
+        wget https://github.com/zephyrproject-rtos/sdk-ng/releases/download/v0.13.2/zephyr-sdk-0.13.2-linux-x86_64-setup.run
+        chmod +x zephyr-sdk-0.13.2-linux-x86_64-setup.run
+        ./zephyr-sdk-0.13.2-linux-x86_64-setup.run -- -d ~/zephyr-sdk-0.13.2
+
+    - name: Initialize Zephyr workspace
+      run: |
+        west init -m https://github.com/antmicro/video-overlays-zephyr-app --mr main workspace
+        cd workspace
+        west update
+
+    - name: Build application
+      run: |
+        cd workspace/video-overlays-zephyr-app
+        west build -b litex_vexriscv -s app
+
+    - name: Upload binaries
+      uses: actions/upload-artifact@v2
+      with:
+        name: app-binaries
+        path: |
+          workspace/video-overlays-zephyr-app/build/zephyr/zephyr.bin
+          workspace/video-overlays-zephyr-app/build/zephyr/zephyr.elf
