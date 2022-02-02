@@ -1,0 +1,46 @@
+#!/bin/bash
+
+git submodule sync --recursive
+git submodule update --init --recursive
+
+PROJ_ROOT="$(dirname $(dirname $(realpath ${BASH_SOURCE[0]})))"
+
+required_packages=(python3 python3-dev python3-pip python3-setuptools verilator make libevent-dev libjson-c-dev build-essential wget bzip2 ninja-build)
+missing_packages=()
+
+for p in ${required_packages[@]}; do
+    status=$(dpkg-query -W --showformat='${db:Status-Status}' "$p" 2>&1)
+    if [[ $status == installed ]];then
+        continue
+    elif ! which $p >/dev/null; then
+        missing_packages+=($p)
+    fi
+done
+
+
+if [ ${#missing_packages[@]} -gt 0 ]; then
+    echo "Missing packages:"
+    echo "${missing_packages[@]}"
+    if which apt >/dev/null; then
+        echo -n "Install missing packages? [y/n] " >&2
+        read answer >/dev/null
+        if [ "$answer" == "y" -o -z "$answer" ]; then
+            sudo apt install "${missing_packages[@]}"
+        fi
+    else
+        exit 1
+    fi
+fi
+
+if ! which riscv64-unknown-elf-gcc >/dev/null; then
+    echo -e "\e[0;31mWARNING:\e[0;33m RISCV GCC toolchain not found.\e[m"
+    echo "Please run scripts/install.sh and then set correct environment variables with:"
+    echo -e "\tsource scripts/init"
+fi
+
+if ! which vivado >/dev/null; then
+    echo -e "\e[0;31mWARNING:\e[0;33m vivado not in path.\e[m"
+fi
+
+echo "In order to provide correct environment variables, source init file:"
+echo -e "\tsource ${PROJ_ROOT}/scripts/init"

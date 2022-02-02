@@ -7,6 +7,15 @@
 # Copyright (c) 2020-2022 Antmicro <www.antmicro.com>
 # SPDX-License-Identifier: BSD-2-Clause
 
+# This variable defines all the external programs that this module
+# relies on.  lxbuildenv reads this variable in order to ensure
+# the build will finish without exiting due to missing third-party
+# programs.
+LX_DEPENDENCIES = ["riscv", "vivado"]
+
+# Import lxbuildenv to integrate the deps/ directory
+import lxbuildenv
+
 import os
 import argparse
 

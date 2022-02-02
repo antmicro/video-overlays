@@ -77,10 +77,9 @@ Below is the whole setup with 2 cameras:
 
 Install the Vivado toolchain. You can download Vivado using this [link](https://www.xilinx.com/support/download/index.html/content/xilinx/en/downloadNav/vivado-design-tools/archive.html).
 The 2017.3 or newer version of Vivado is recommended.
-Next follow the instructions below:
+Next follow the instructions below. All commands are assumed to be executed from main repository directory:
 
 1. Get all required submodules:
-
 ```bash
 git submodule update --init --recursive
 ```
@@ -88,7 +87,20 @@ git submodule update --init --recursive
 2. Get all required packages:
 ```bash
 apt-get install build-essential bzip2 python3 python3-dev python3-pip xc3sprog
+pip3 install meson
 ./install.sh
+make setup-litex
+```
+3. Setup Zephyr dependencies following [official guide](https://docs.zephyrproject.org/latest/getting_started/index.html#install-dependencies).
+
+4. Setup Zephyr SDK following [official guide](https://docs.zephyrproject.org/latest/getting_started/index.html#install-a-toolchain).
+
+5. Initialize Zephyr and install Python dependencies:
+```bash
+pip3 install --user -U west
+export PATH=~/.local/bin:"$PATH"
+make setup-zephyr
+pip3 install --user -r software/zephyr/scripts/requirements.txt
 ```
 
 ### Build bitstream
@@ -98,8 +110,9 @@ apt-get install build-essential bzip2 python3 python3-dev python3-pip xc3sprog
 ```bash
 source ./init
 source ${PATH_TO_VIVADO_TOOLCHAIN}/settings64.sh
-targets/digilent_arty.py --build --with-ethernet --eth-ip 192.0.2.1 --timer-uptime --csr-data-width 8 --csr-csv csr.csv --uart-baudrate 1843200
+make bitstream
 ```
+You can pass additional parameters for LiteX builder by setting `EXTRA_LITEX_ARGS` flag. Default UART baudrate is set to `1843200` but you can change it with `UART_SPEED` flag.
 
 ### Upload bitstream
 
@@ -108,9 +121,18 @@ If you have already installed `xc3sprog` and built a bitstream, connect your boa
 xc3sprog -c nexys4 digilent_arty.bit
 ```
 
-### Build and flash software
+### Build software
 
-To build an application follow the instructions in the [Video Overlays Application repository](https://github.com/antmicro/video-overlays-zephyr-app). Then upload the binary with following command:
+If you have installed all required [prerequisities](#prerequisites), you should be able to build application with following command:
+```bash
+make software
+```
+Binaries will be placed in `software/video-overlays-zephyr-app/build/zephyr/`.
+After setting up Zephyr once, you can use `make setup-zephyr` to update application or `make software` to build binaries.
+
+### Flash software
+
+To upload the binary use following command:
 ```bash
 litex_term /dev/ttyUSB1 --speed 1843200 --kernel zephyr.bin
 ```
@@ -145,8 +167,8 @@ unsigned char logo[165600] = {
 
 ## Source code structure
 
-- [targets](targets/digilent_arty.py) contains the SoC description for the supported boards:
-- [third_party/litex/litex/soc/cores](third_party/litex/litex/soc/cores) contains sources of the LiteX Boards:
-  - [fastvdma](third_party/litex/litex/soc/cores/fastvdma) contains FastVDMA IP-Cores and Verilog sources,
-  - [ov2640.py](third_party/litex/litex/soc/cores/ov2640.py) is an IP-Core for OmniVision OV2640 image digital sensor,
-  - [gpu.py](third_party/litex/litex/soc/cores/gpu.py) is an IP-Core with GPU capable of blending images or filling images with color.
+- [targets](targets/digilent_arty.py) contains the SoC description for the supported boards,
+- [gateware/deps/litex/litex/soc/cores](https://github.com/antmicro/litex/tree/video-overlays/litex/soc/cores) contains sources of the LiteX Boards:
+  - [fastvdma](https://github.com/antmicro/litex/tree/video-overlays/litex/soc/cores/fastvdma) contains FastVDMA IP-Cores and Verilog sources,
+  - [ov2640.py](https://github.com/antmicro/litex/blob/video-overlays/litex/soc/cores/ov2640.py) is an IP-Core for OmniVision OV2640 image digital sensor,
+  - [gpu.py](https://github.com/antmicro/litex/blob/video-overlays/litex/soc/cores/gpu.py) is an IP-Core with GPU capable of blending images or filling images with color.

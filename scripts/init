@@ -1,0 +1,5 @@
+export PATH="${PWD}/third_party/litex/litex/tools:$PATH"
+export PATH="${PWD}/tools/conda/bin:$PATH"
+export PATH="${PWD}/gateware/bin:$PATH"
+
+export PYTHONPATH="${PWD}/gateware:$PYTHONPATH"
