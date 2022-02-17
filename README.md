@@ -29,7 +29,9 @@ The application which provides a CLI which exposes many configuration possibilit
   - reset IP-Core registers.
 
 - overlay:
+  - choose overlay mode to text or logo,
   - manually set text to be overlaid by GPU on captured image,
+  - manually set position of a logo on an image,
 
 - test functionalities:
   - display colors - display red, green and blue image with a 2s delay between them,
@@ -113,6 +115,33 @@ To build an application follow the instructions in the [Video Overlays Applicati
 litex_term /dev/ttyUSB1 --speed 1843200 --kernel zephyr.bin
 ```
 Note: `ttyUSB1` might be different on your machine so make sure what is your device name.
+
+
+## Overlay custom graphic
+
+By default when overlay is in `logo mode` there is an Antmicro's logo applied on top of an image. If you want to change that you can convert your own image to C char array and replace `logo.h`. To do that follow instructions below (example for 800x600px):
+1. Choose an image you want to overlay and convert it to raw RGBA format. If your image is `input.png` you can use following command:
+```bash
+ffmpeg -vcodec png -f image2 -s 800x600 -i input.png -f rawvideo -vcodec rawvideo -pix_fmt rgba logo.rgba
+```
+2. Generate C header from converted image:
+```bash
+xxd -i logo.rgba >> logo.h
+```
+3. Add image size defines to header:
+```C
+#define LOGO_WIDTH 800
+#define LOGO_HEIGTH 600
+```
+4. Add array size (it can be found on a bottom of generated header) and change its name. Replace:
+```C
+unsigned char logo_rgba[] = {
+```
+with:
+```C
+unsigned char logo[165600] = {
+```
+
 
 ## Source code structure
 
