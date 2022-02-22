@@ -165,10 +165,18 @@ unsigned char logo[165600] = {
 ```
 
 
+## Blend two custom images
+
+There are 2 empty files in `include` directory: `image_1.h` and `image_2.h`. If you want to blend two custom images with each other, convert them the same way as in step [Overlay custom graphic](overlay-custom-graphic) but replace a `logo` keyword with `image_1` or `image_2` respectively.
+**Important: both images must have the same width and height.**
+
+
 ## Source code structure
 
 - [targets](targets/digilent_arty.py) contains the SoC description for the supported boards,
 - [gateware/deps/litex/litex/soc/cores](https://github.com/antmicro/litex/tree/video-overlays/litex/soc/cores) contains sources of the LiteX Boards:
   - [fastvdma](https://github.com/antmicro/litex/tree/video-overlays/litex/soc/cores/fastvdma) contains FastVDMA IP-Cores and Verilog sources,
   - [ov2640.py](https://github.com/antmicro/litex/blob/video-overlays/litex/soc/cores/ov2640.py) is an IP-Core for OmniVision OV2640 image digital sensor,
-  - [gpu.py](https://github.com/antmicro/litex/blob/video-overlays/litex/soc/cores/gpu.py) is an IP-Core with GPU capable of blending images or filling images with color.
+  - [gpu.py](https://github.com/antmicro/litex/blob/video-overlays/litex/soc/cores/gpu.py) is an IP-Core with GPU capable of blending images or filling images with color,
+- `software` is a directory generated with `make setup-zephyr` and it contains files required to build application:
+  - [video-overlays-zephyr-app](https://github.com/antmicro/video-overlays-zephyr-app) contains a Zephyr application itself.
