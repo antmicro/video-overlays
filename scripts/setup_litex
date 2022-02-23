@@ -21,15 +21,6 @@ done
 if [ ${#missing_packages[@]} -gt 0 ]; then
     echo "Missing packages:"
     echo "${missing_packages[@]}"
-    if which apt >/dev/null; then
-        echo -n "Install missing packages? [y/n] " >&2
-        read answer >/dev/null
-        if [ "$answer" == "y" -o -z "$answer" ]; then
-            sudo apt install "${missing_packages[@]}"
-        fi
-    else
-        exit 1
-    fi
 fi
 
 if ! which riscv64-unknown-elf-gcc >/dev/null; then

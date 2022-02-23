@@ -14,13 +14,12 @@ for p in ${required_packages[@]}; do
     fi
 done
 
-echo "Missing packages:"
-echo "${missing_packages[@]}"
-
 if [ ${#missing_packages[@]} -gt 0 ]; then
+    echo "Missing packages:"
+    echo "${missing_packages[@]}\n"
     echo -e "\e[0;31mWARNING:\e[0;33m Zephyr dependencies not satisfied\e[m"
     echo "Please follow official Zephyr's guide to install it:"
-    echo -e "\thttps://docs.zephyrproject.org/latest/getting_started/index.html"
+    echo -e "\thttps://docs.zephyrproject.org/latest/getting_started/index.html#install-dependencies"
 fi
 
 # Minimum required version for the main Zephyr dependencies

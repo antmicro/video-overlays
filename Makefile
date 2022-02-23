@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-PROJ_ROOT="$(dirname $(dirname $(realpath ${BASH_SOURCE[0]})))"
 SHELL = /bin/bash
 
 export UART_SPEED	?= 1843200
