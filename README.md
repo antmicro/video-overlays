@@ -73,6 +73,9 @@ Below is the whole setup with 2 cameras:
 
 ## Building and running the project
 
+The Video Overlays project has been tested on Ubuntu 20.04 and a following guide is prepared for this OS.
+
+
 ### Prerequisites
 
 Install the Vivado toolchain. You can download Vivado using this [link](https://www.xilinx.com/support/download/index.html/content/xilinx/en/downloadNav/vivado-design-tools/archive.html).
@@ -84,16 +87,32 @@ Next follow the instructions below. All commands are assumed to be executed from
 git submodule update --init --recursive
 ```
 
-2. Get all required packages:
+2. Get basic required packages:
 ```bash
-apt-get install build-essential bzip2 python3 python3-dev python3-pip xc3sprog
+apt install build-essential bzip2 python3 python3-dev python3-pip xc3sprog wget verilator libevent-dev libjson-c-dev ninja-build \
+
 pip3 install meson
-./install.sh
+./scripts/install.sh
 make setup-litex
 ```
-3. Setup Zephyr dependencies following [official guide](https://docs.zephyrproject.org/latest/getting_started/index.html#install-dependencies).
 
-4. Setup Zephyr SDK following [official guide](https://docs.zephyrproject.org/latest/getting_started/index.html#install-a-toolchain).
+3. Install Zephyr dependencies:
+```bash
+wget https://apt.kitware.com/kitware-archive.sh
+bash kitware-archive.sh
+apt install --no-install-recommends git cmake ninja-build gperf \
+  ccache dfu-util device-tree-compiler \
+  python3-setuptools python3-tk python3-wheel xz-utils file \
+  make gcc gcc-multilib g++-multilib libsdl2-dev
+```
+
+4. Install Zephyr SDK:
+```bash
+wget https://github.com/zephyrproject-rtos/sdk-ng/releases/download/v0.13.2/zephyr-sdk-0.13.2-linux-x86_64-setup.run
+chmod +x zephyr-sdk-0.13.2-linux-x86_64-setup.run
+./zephyr-sdk-0.13.2-linux-x86_64-setup.run -- -d /path/to/sdk
+export ZEPHYR_SDK_INSTALL_DIR=/path/to/sdk
+```
 
 5. Initialize Zephyr and install Python dependencies:
 ```bash
@@ -103,12 +122,15 @@ make setup-zephyr
 pip3 install --user -r software/zephyr/scripts/requirements.txt
 ```
 
+In case you need more information about Zephyr installation, check [official Zephyr guidelines](https://docs.zephyrproject.org/latest/getting_started/index.html).
+
+
 ### Build bitstream
 
 1. Build the bitstream following these steps:
 
 ```bash
-source ./init
+source ./scripts/init
 source ${PATH_TO_VIVADO_TOOLCHAIN}/settings64.sh
 make bitstream
 ```
@@ -150,18 +172,10 @@ ffmpeg -vcodec png -f image2 -s 800x600 -i input.png -f rawvideo -vcodec rawvide
 ```bash
 xxd -i logo.rgba >> logo.h
 ```
-3. Add image size defines to header:
+3. Add image size defines to a header:
 ```C
 #define LOGO_WIDTH 800
 #define LOGO_HEIGTH 600
-```
-4. Add array size (it can be found on a bottom of generated header) and change its name. Replace:
-```C
-unsigned char logo_rgba[] = {
-```
-with:
-```C
-unsigned char logo[165600] = {
 ```
 
 
