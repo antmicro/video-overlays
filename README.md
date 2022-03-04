@@ -140,7 +140,7 @@ You can pass additional parameters for LiteX builder by setting `EXTRA_LITEX_ARG
 
 If you have already installed `xc3sprog` and built a bitstream, connect your board to PC and run following command:
 ```bash
-xc3sprog -c nexys4 digilent_arty.bit
+make upload
 ```
 
 ### Build software
@@ -156,9 +156,12 @@ After setting up Zephyr once, you can use `make setup-zephyr` to update applicat
 
 To upload the binary use following command:
 ```bash
-litex_term /dev/ttyUSB1 --speed 1843200 --kernel zephyr.bin
+make program
 ```
-Note: `ttyUSB1` might be different on your machine so make sure what is your device name.
+You can also set flags `UART_SPEED` and `TTY` to specify UART baudrate or a device to program:
+```bash
+make program UART_SPEED=3686400 TTY=/dev/ttyUSB1
+```
 
 
 ## Overlay custom graphic
