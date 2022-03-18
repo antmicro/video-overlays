@@ -1,10 +1,10 @@
-# Video Overlays
+# Video Overlays Reference System
 
 Copyright (c) 2021-2022 [Antmicro](https://www.antmicro.com)
 
 ## Overview
 
-The Video Overlays project is a fully open source reference system for overlaying data onto a video stream on FPGA, based on the LiteX ecosystem and Zephyr RTOS. It provides an application with a CLI to control the OmniVision OV2640 camera configuration and a GPU IP Core to capture and process images. The stream from the camera can be displayed directly via HDMI or can be first processed by the GPU to apply an overlay on top of it.
+The Video Overlays project is a fully open source reference system for overlaying data onto a video stream on FPGA, based on the LiteX ecosystem and Zephyr RTOS. It provides an application with a CLI to control the OmniVision OV2640 camera configuration and a 2D GPU IP Core to capture and process images. The stream from the camera can be displayed directly via HDMI or can be first processed by the GPU to apply an overlay on top of it.
 
 ## Supported features
 
@@ -63,9 +63,9 @@ All IP Cores which are configurable from the OS level are configured via the Con
 
 The SoC is dedicated for an Arty A7-35T board, but it should be easily portable to any other board which supports 4x PMOD connectors needed to attach an Expansion Board. This project has been tested with the following hardware:
 - [Arty A7-35T](https://digilent.com/reference/programmable-logic/arty-a7/start)
-- [OmniVision OV2640](https://www.uctronics.com/download/cam_module/OV2640DS.pdf) - sensors were extracted from [Waveshare OV2640](https://www.waveshare.com/ov2640-camera-board.htm)
-- [Camera board adapter]()
-- [Arty Expansion Board]()
+- OmniVision OV2640 [HDF3M-811](https://www.aliexpress.com/i/32955849498.html)
+- Camera board adapter (coming soon...)
+- Arty Expansion Board (coming soon...)
 - each camera requires a 24-pin FFC cable with both connectors on the same side
 
 Below is the whole setup with 2 cameras:
@@ -89,7 +89,7 @@ git submodule update --init --recursive
 
 2. Get basic required packages:
 ```bash
-apt install build-essential bzip2 python3 python3-dev python3-pip xc3sprog wget verilator libevent-dev libjson-c-dev ninja-build \
+apt install build-essential bzip2 python3 python3-dev python3-pip xc3sprog wget verilator libevent-dev libjson-c-dev ninja-build
 
 pip3 install meson
 ./scripts/install.sh
@@ -100,24 +100,21 @@ make setup-litex
 ```bash
 wget https://apt.kitware.com/kitware-archive.sh
 bash kitware-archive.sh
-apt install --no-install-recommends git cmake ninja-build gperf \
-  ccache dfu-util device-tree-compiler \
-  python3-setuptools python3-tk python3-wheel xz-utils file \
-  make gcc gcc-multilib g++-multilib libsdl2-dev
+apt install --no-install-recommends git cmake ninja-build gperf ccache dfu-util device-tree-compiler python3-setuptools python3-tk python3-wheel xz-utils file make gcc gcc-multilib g++-multilib libsdl2-dev
 ```
 
 4. Install Zephyr SDK:
 ```bash
 wget https://github.com/zephyrproject-rtos/sdk-ng/releases/download/v0.13.2/zephyr-sdk-0.13.2-linux-x86_64-setup.run
 chmod +x zephyr-sdk-0.13.2-linux-x86_64-setup.run
-./zephyr-sdk-0.13.2-linux-x86_64-setup.run -- -d /path/to/sdk
-export ZEPHYR_SDK_INSTALL_DIR=/path/to/sdk
+export ZEPHYR_SDK_INSTALL_DIR="/path/to/sdk"
+./zephyr-sdk-0.13.2-linux-x86_64-setup.run -- -d $ZEPHYR_SDK_INSTALL_DIR
 ```
 
 5. Initialize Zephyr and install Python dependencies:
 ```bash
 pip3 install --user -U west
-export PATH=~/.local/bin:"$PATH"
+export PATH="~/.local/bin:$PATH"
 make setup-zephyr
 pip3 install --user -r software/zephyr/scripts/requirements.txt
 ```
