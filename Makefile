@@ -29,7 +29,7 @@ bitstream:
 	python3 $(PROJ_ROOT)/targets/$(TARGET).py --build --with-ethernet --eth-ip 192.0.2.1 --timer-uptime --csr-data-width 8 --uart-baudrate $(UART_SPEED) --csr-csv build/digilent_arty/csr.csv $(EXTRA_LITEX_ARGS)
 
 upload:
-	xc3sprog -c nexys4 $(PROJ_ROOT)/build/$(TARGET)/gateware/$(TARGET).bit
+	python3 $(PROJ_ROOT)/targets/$(TARGET).py --no-compile-software --load --lx-ignore-deps $(EXTRA_LITEX_ARGS)
 
 litex-software:
 	python3 $(PROJ_ROOT)/targets/$(TARGET).py --lx-ignore-deps --with-ethernet --eth-ip 192.0.2.1 --timer-uptime --csr-data-width 8 --uart-baudrate $(UART_SPEED) --csr-csv build/digilent_arty/csr.csv $(EXTRA_LITEX_ARGS)

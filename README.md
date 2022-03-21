@@ -91,7 +91,7 @@ git submodule update --init --recursive
 
 2. Get basic required packages:
 ```bash
-apt install build-essential bzip2 python3 python3-dev python3-pip xc3sprog wget verilator libevent-dev libjson-c-dev ninja-build
+apt install build-essential bzip2 python3 python3-dev python3-pip wget verilator libevent-dev libjson-c-dev ninja-build
 
 pip3 install meson
 ./scripts/install.sh
@@ -137,10 +137,20 @@ You can pass additional parameters for LiteX builder by setting `EXTRA_LITEX_ARG
 
 ### Upload bitstream
 
-If you have already installed `xc3sprog` and built a bitstream, connect your board to PC and run following command:
+If you have already built a bitstream, connect your board to PC and run following command:
 ```bash
 make upload
 ```
+
+If you encounter an error:
+```bash
+OSError: Error occured during OpenOCD's call, please check:
+- OpenOCD installation.
+- access permissions.
+- hardware and cable.
+```
+you might need to modify privileges to your USB devices by following [this tutorial](https://forgge.github.io/theCore/guides/running-openocd-without-sudo.html).
+
 
 ### Build software
 
