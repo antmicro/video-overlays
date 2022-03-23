@@ -33,12 +33,9 @@ from litex.soc.interconnect.stream import SyncFIFO
 
 from litevideo.output import VideoOut
 
-# Import custom IP Cores
 from ov2640 import OV2640
-from gpu import *
-from fastvdma.fastvdma_reader import *
-from fastvdma.fastvdma_writer import *
-from fastvdma.fastvdma_ov2640 import *
+from gpu_2d import GPU_2D
+from fastvdma import FastVDMA
 
 
 # Platform description for HDMI connector on Expansion Board ---------------------------------------
@@ -132,17 +129,17 @@ class ArtySoC(BaseSoC):
         self.submodules.i2c_pmod = I2CMaster(self.platform.request("i2c_pmod"))
 
         # Left camera DMA reader (camera -> memory)
-        self.submodules.fastvdma_ov2640_left = fastvdma_ov2640_left = FastVDMA_OV2640(self.platform)
+        self.submodules.fastvdma_ov2640_left = fastvdma_ov2640_left = FastVDMA(self.platform, "AXIS_WB_WB")
         self.bus.add_slave("fastvdma_slave_control_1", self.fastvdma_ov2640_left.wb_slave_control, SoCRegion(origin=0x8000a000, size=0x00001000, cached=False))
         self.bus.add_master(name="fastvdma_master_writer_1", master=fastvdma_ov2640_left.wb_master_writer)
 
         # Right camera DMA reader (camera -> memory)
-        self.submodules.fastvdma_ov2640_right = fastvdma_ov2640_right = FastVDMA_OV2640(self.platform)
+        self.submodules.fastvdma_ov2640_right = fastvdma_ov2640_right = FastVDMA(self.platform, "AXIS_WB_WB")
         self.bus.add_slave("fastvdma_slave_control_2", self.fastvdma_ov2640_right.wb_slave_control, SoCRegion(origin=0x8000b000, size=0x00001000, cached=False))
         self.bus.add_master(name="fastvdma_master_writer_2", master=fastvdma_ov2640_right.wb_master_writer)
 
         # Left camera signals synchronization
-        self.submodules.ov2640_left = OV2640(self.platform.request("ov2640", number=0), fastvdma_ov2640_left.io_sync_readerBusy, leds_pads=self.platform.request("rgb_led", number=0))
+        self.submodules.ov2640_left = OV2640(self.platform.request("ov2640", number=0), fastvdma_ov2640_left.io_sync_readerBusy)
 
         # Right camera signals synchronization
         self.submodules.ov2640_right = OV2640(self.platform.request("ov2640", number=1), fastvdma_ov2640_right.io_sync_readerBusy)
@@ -184,7 +181,6 @@ class ArtySoC(BaseSoC):
             fifo_depth= 1024))
 
         self.comb += [
-            self.cd_hdmi.clk.eq(self.crg.cd_sys.clk),
             self.cd_hdmi.rst.eq(self.framebuffer.reset.storage | self.crg.cd_sys.rst),
             framebuffer.driver.clocking.cd_pix.rst.eq(self.cd_hdmi.rst),
         ]
@@ -198,28 +194,28 @@ class ArtySoC(BaseSoC):
             framebuffer.driver.clocking.cd_pix5x.clk)
 
         # -| FastVDMA RAM reader 1 |----------------------------------------------------------------
-        self.submodules.gpu_dma_r1 = FastVDMAReader(self.platform)
+        self.submodules.gpu_dma_r1 = FastVDMA(self.platform, "WB_WB_AXIS")
 
         # Attach FastVDMA's frontends to Wishbone bus
-        self.bus.add_slave("gpu_dma_r1_ctrl", self.gpu_dma_r1.wb_ctrl,
+        self.bus.add_slave("gpu_dma_r1_ctrl", self.gpu_dma_r1.wb_slave_control,
                             SoCRegion(origin=0x8000c000, size=0x1000, cached=False))
-        self.bus.add_master("gpu_dma_r1", self.gpu_dma_r1.wb_r)
+        self.bus.add_master("gpu_dma_r1", self.gpu_dma_r1.wb_master_reader)
 
         # -| FastVDMA RAM reader 2 |----------------------------------------------------------------
-        self.submodules.gpu_dma_r2 = FastVDMAReader(self.platform)
+        self.submodules.gpu_dma_r2 = FastVDMA(self.platform, "WB_WB_AXIS")
 
         # Attach FastVDMA's frontends to Wishbone bus
-        self.bus.add_slave("gpu_dma_r2_ctrl", self.gpu_dma_r2.wb_ctrl,
+        self.bus.add_slave("gpu_dma_r2_ctrl", self.gpu_dma_r2.wb_slave_control,
                             SoCRegion(origin=0x8000d000, size=0x1000, cached=False))
-        self.bus.add_master("gpu_dma_r2", self.gpu_dma_r2.wb_r)
+        self.bus.add_master("gpu_dma_r2", self.gpu_dma_r2.wb_master_reader)
 
         # -| FastVDMA RAM writer |------------------------------------------------------------------
-        self.submodules.gpu_dma_w = FastVDMAWriter(self.platform)
+        self.submodules.gpu_dma_w = FastVDMA(self.platform, "AXIS_WB_WB")
 
         # Attach FastVDMA's frontends to Wishbone bus
-        self.bus.add_slave("gpu_dma_w_ctrl", self.gpu_dma_w.wb_ctrl,
+        self.bus.add_slave("gpu_dma_w_ctrl", self.gpu_dma_w.wb_slave_control,
                             SoCRegion(origin=0x8000e000, size=0x1000, cached=False))
-        self.bus.add_master("gpu_dma_w", self.gpu_dma_w.wb_w)
+        self.bus.add_master("gpu_dma_w", self.gpu_dma_w.wb_master_writer)
 
         # Pass both inputs to GPU through FIFO to synchronize signals
         self.submodules.input1_fifo = input1_fifo = SyncFIFO([("data", 32)], 512)
@@ -227,15 +223,15 @@ class ArtySoC(BaseSoC):
 
         self.comb += [
             # Inputs from memory (images from cameras)
-            self.gpu_dma_r1.axi_m.connect(input1_fifo.sink, omit={"user"}),
+            self.gpu_dma_r1.axi_stream_writer.connect(input1_fifo.sink, omit={"user"}),
 
             # Inputs from memory (generated images with text)
-            self.gpu_dma_r2.axi_m.connect(input2_fifo.sink, omit={"user"}),
+            self.gpu_dma_r2.axi_stream_writer.connect(input2_fifo.sink, omit={"user"}),
         ]
 
         # -| Alpha blender |------------------------------------------------------------------------
-        gpu_dmas = [input1_fifo.source, input2_fifo.source, self.gpu_dma_w]
-        self.submodules.gpu = GPU(gpu_dmas)
+        gpu_dmas = [input1_fifo.source, input2_fifo.source, self.gpu_dma_w.axi_stream_reader]
+        self.submodules.gpu = GPU_2D(gpu_dmas)
 
 
 # Build --------------------------------------------------------------------------------------------

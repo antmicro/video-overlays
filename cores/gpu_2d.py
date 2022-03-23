@@ -1,5 +1,5 @@
 # Copyright (c) 2021-2022 Antmicro <www.antmicro.com>
-# SPDX-License-Identifier: BSD-2-Clause
+# SPDX-License-Identifier: Apache-2.0
 
 from enum import IntEnum
 
@@ -8,13 +8,13 @@ from migen import *
 from litex.soc.interconnect.axi import *
 from litex.soc.interconnect.csr import *
 
-# -| GPU operating modes |------------------------------------------------------
+# -| 2D GPU operating modes |------------------------------------------------------
 class GPU_MODE(IntEnum):
     IDLE            = 0b00
     ALPHA_BLENDER   = 0b01
     FILL_AREA       = 0b10
 
-class GPU(Module, AutoCSR):
+class GPU_2D(Module, AutoCSR):
     def __init__(self, DMA):
         # -| GPU control status register |--------------------------------------
         self.ctrl_reg = CSRStorage(8, description="GPU mode control register")
@@ -36,12 +36,12 @@ class GPU(Module, AutoCSR):
             self.axi_in2.last.eq(DMA[1].last),
 
             # Output
-            DMA[2].axi_s.valid.eq(self.axi_out.valid),
-            self.axi_out.ready.eq(DMA[2].axi_s.ready),
-            DMA[2].axi_s.last.eq(self.axi_out.last),
+            DMA[2].valid.eq(self.axi_out.valid),
+            self.axi_out.ready.eq(DMA[2].ready),
+            DMA[2].last.eq(self.axi_out.last),
         ]
 
-        #self.sync += DMA[2].axi_s.valid.eq(self.axi_out.valid)
+        #self.sync += DMA[2].valid.eq(self.axi_out.valid)
 
         # -| AXI-Stream handshake |---------------------------------------------
         input_rdy  = [Signal() for _ in range(4)]
@@ -63,7 +63,7 @@ class GPU(Module, AutoCSR):
                 self.axi_in2.data.eq(DMA[1].data),
             ),
             If(output_rdy,
-                DMA[2].axi_s.data.eq(self.axi_out.data),
+                DMA[2].data.eq(self.axi_out.data),
             )
         ]
 
@@ -71,7 +71,7 @@ class GPU(Module, AutoCSR):
         # -| Alpha blender mode |-
         blender_rdy = Signal()
         self.comb += [
-            blender_rdy.eq(DMA[0].valid & DMA[1].valid & DMA[2].axi_s.ready),
+            blender_rdy.eq(DMA[0].valid & DMA[1].valid & DMA[2].ready),
             If(self.ctrl_reg.storage == GPU_MODE.ALPHA_BLENDER,
                 # Input ready to process new pixels
                 If(blender_rdy,
