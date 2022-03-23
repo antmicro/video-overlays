@@ -29,15 +29,16 @@ from litex.soc.integration.soc import SoCRegion
 from litex.soc.integration.soc_core import *
 from litex.soc.integration.builder import *
 from litex.soc.cores.bitbang import I2CMaster
-from litex.soc.cores.ov2640 import OV2640
 from litex.soc.interconnect.stream import SyncFIFO
 
 from litevideo.output import VideoOut
 
-from litex.soc.cores.gpu import *
-from litex.soc.cores.fastvdma.fastvdma_reader import *
-from litex.soc.cores.fastvdma.fastvdma_writer import *
-from litex.soc.cores.fastvdma.fastvdma_ov2640 import *
+# Import custom IP Cores
+from ov2640 import OV2640
+from gpu import *
+from fastvdma.fastvdma_reader import *
+from fastvdma.fastvdma_writer import *
+from fastvdma.fastvdma_ov2640 import *
 
 
 # Platform description for HDMI connector on Expansion Board ---------------------------------------

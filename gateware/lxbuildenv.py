@@ -103,10 +103,14 @@ def get_python_path(script_path, args):
 
     # The Video Overlays structure is to execute boards targets from targets
     # directory while lxbuildenv and LiteX dependencies are kept in gateware
-    # directory. To make lxbuildenv.py possible to import from targets we do
-    # add path to that script to PYTHONPATH here. It is resolved the same way
+    # directory. To make lxbuildenv.py possible to be imported from targets we
+    # do add path to that script to PYTHONPATH here. It is resolved the same way
     # for meson.
     python_path.append(script_path)
+
+    # We also need to have `cores/` directory in PYTHONPATH
+    cores_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "cores") + os.path.sep
+    python_path.append(cores_dir)
 
     if os.path.isdir(script_path + DEPS_DIR):
         for dep in os.listdir(script_path + DEPS_DIR):
