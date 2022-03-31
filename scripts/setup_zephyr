@@ -59,13 +59,18 @@ if [[ found_zephyr -eq 0 ]] && [[ -z "$ZEPHYR_SDK_INSTALL_DIR" ]]; then
     exit 1
 fi
 
+# Update submodules if app does not exist
+if [[ -z "${PROJ_ROOT}/software/video-overlays-zephyr-app" ]]; then
+    git submodule update --init
+fi
+
 # Initialize app workspace or update it
-if [[ ! -e "${PROJ_ROOT}/software" ]]; then
-    west init -m https://github.com/antmicro/video-overlays-zephyr-app --mr main software
+if [[ ! -e "${PROJ_ROOT}/software/zephyr" ]]; then
+    west init -l software/video-overlays-zephyr-app
     pushd software
     west update
     echo "Zephyr workspace setup successful."
-elif [[ -e "${PROJ_ROOT}/software" ]]; then
+elif [[ -e "${PROJ_ROOT}/software/zephyr" ]]; then
     pushd software
     west update
     pushd video-overlays-zephyr-app

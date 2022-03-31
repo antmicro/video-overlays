@@ -1,4 +1,5 @@
 tools
 build
 __pycache__/
-software
+software/*
+!software/video-overlays-zephyr-app

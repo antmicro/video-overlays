@@ -34,3 +34,6 @@
 [submodule "gateware/deps/pythondata-software-picolibc"]
 	path = gateware/deps/pythondata-software-picolibc
 	url = https://github.com/litex-hub/pythondata-software-picolibc.git
+[submodule "software/video-overlays-zephyr-app"]
+	path = software/video-overlays-zephyr-app
+	url = https://github.com/antmicro/video-overlays-zephyr-app.git
