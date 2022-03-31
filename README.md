@@ -95,7 +95,6 @@ apt install build-essential bzip2 python3 python3-dev python3-pip wget verilator
 
 pip3 install meson
 ./scripts/install.sh
-make setup-litex
 ```
 
 3. Install Zephyr dependencies:
@@ -117,7 +116,11 @@ export ZEPHYR_SDK_INSTALL_DIR="/path/to/sdk"
 ```bash
 pip3 install --user -U west
 export PATH="~/.local/bin:$PATH"
-make setup-zephyr
+```
+
+6. Finish LiteX and Zephyr configuration:
+```bash
+make setup
 pip3 install --user -r software/zephyr/scripts/requirements.txt
 ```
 

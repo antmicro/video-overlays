@@ -40,6 +40,8 @@ setup-litex:
 setup-zephyr:
 	$(PROJ_ROOT)/scripts/setup_zephyr
 
+setup: setup-litex setup-zephyr
+
 clean: clean-software clean-bitstream
 
 clean-software:
