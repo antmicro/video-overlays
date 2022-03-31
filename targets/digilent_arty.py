@@ -248,7 +248,6 @@ def main():
     ethopts.add_argument("--with-etherbone",     action="store_true",              help="Enable Etherbone support")
     parser.add_argument("--eth-ip",              default="192.168.1.50", type=str, help="Ethernet/Etherbone IP address")
     parser.add_argument("--eth-dynamic-ip",      action="store_true",              help="Enable dynamic Ethernet IP addresses setting")
-    parser.add_argument("--no-ident-version",    action="store_false",             help="Disable build time output")
     builder_args(parser)
     soc_core_args(parser)
     vivado_build_args(parser)
@@ -264,7 +263,6 @@ def main():
         with_etherbone = args.with_etherbone,
         eth_ip         = args.eth_ip,
         eth_dynamic_ip = args.eth_dynamic_ip,
-        ident_version  = args.no_ident_version,
         **soc_core_argdict(args)
     )
 
