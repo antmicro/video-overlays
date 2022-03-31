@@ -2,7 +2,7 @@
 
 SHELL = /bin/bash
 
-export UART_SPEED	?= 1843200
+export UART_SPEED	?= 3686400
 export PROJ_ROOT	:= $(realpath $(CURDIR))
 export TARGET		?= digilent_arty
 export TTY		:= $(wildcard /dev/ttyUSB?)
