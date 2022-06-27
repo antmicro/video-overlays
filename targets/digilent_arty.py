@@ -129,12 +129,12 @@ class ArtySoC(BaseSoC):
         self.submodules.i2c_pmod = I2CMaster(self.platform.request("i2c_pmod"))
 
         # Left camera DMA reader (camera -> memory)
-        self.submodules.fastvdma_ov2640_left = fastvdma_ov2640_left = FastVDMA(self.platform, "AXIS_WB_WB")
+        self.submodules.fastvdma_ov2640_left = fastvdma_ov2640_left = FastVDMA(self.platform, "AXIS_WB_WB", with_busy_signals=True)
         self.bus.add_slave("fastvdma_slave_control_1", self.fastvdma_ov2640_left.wb_slave_control, SoCRegion(origin=0x8000a000, size=0x00001000, cached=False))
         self.bus.add_master(name="fastvdma_master_writer_1", master=fastvdma_ov2640_left.wb_master_writer)
 
         # Right camera DMA reader (camera -> memory)
-        self.submodules.fastvdma_ov2640_right = fastvdma_ov2640_right = FastVDMA(self.platform, "AXIS_WB_WB")
+        self.submodules.fastvdma_ov2640_right = fastvdma_ov2640_right = FastVDMA(self.platform, "AXIS_WB_WB", with_busy_signals=True)
         self.bus.add_slave("fastvdma_slave_control_2", self.fastvdma_ov2640_right.wb_slave_control, SoCRegion(origin=0x8000b000, size=0x00001000, cached=False))
         self.bus.add_master(name="fastvdma_master_writer_2", master=fastvdma_ov2640_right.wb_master_writer)
 
