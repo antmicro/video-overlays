@@ -16,7 +16,7 @@ from litex.soc.cores.clock import *
 # "vsync": 1
 
 class OV2640(Module, AutoCSR):
-    def __init__(self, pads, _dma_busy_signal, leds_pads=None):
+    def __init__(self, pads, _dma_busy_signal):
 
         assert isinstance(_dma_busy_signal, Signal)
 
@@ -55,31 +55,6 @@ class OV2640(Module, AutoCSR):
         # FSM
         self.submodules.fsm = fsm = ClockDomainsRenamer("pclk")(FSM(reset_state="WAIT_START_DMA"))
         self.submodules.fifo = fifo = ClockDomainsRenamer({"write": "pclk", "read": "sys"})(AsyncFIFO([("data", 32)], depth=512))
-
-        print(type(leds_pads))
-        if isinstance(leds_pads, Record):
-            print("LEDs attached to FIFO")
-            fifo_status = Signal(len(leds_pads))
-            self.comb += [
-                leds_pads.r.eq(fifo_status),
-                leds_pads.g.eq(fifo_status),
-                leds_pads.b.eq(fifo_status),
-            ]
-
-            fsm.act("WAIT_START_DMA",
-                If(fifo.sink.valid,
-                    NextValue(fifo_status, 0xff),
-                ).Else(
-                    NextValue(fifo_status, 0),
-                ),
-            )
-            fsm.act("CAPTURE",
-                If(fifo.sink.valid,
-                    NextValue(fifo_status, 0xff),
-                ).Else(
-                    NextValue(fifo_status, 0),
-                ),
-            )
 
         fsm.act("WAIT_START_DMA",
             NextValue(fifo.sink.valid, 0),
