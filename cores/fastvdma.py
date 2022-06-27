@@ -18,12 +18,14 @@ class FastVDMA(Module, AutoCSR):
         - "AXIS_WB_WB": AXI Stream to AXI Stream  with control via slave Wishbone
         - "WB_WB_AXIS": Wishbone to AXI Stream with control via slave Wishbone
     """
-    def __init__(self, platform, config):
+    def __init__(self, platform, config, name="DMATop_", with_busy_signals=False):
         assert config in ["AXIS_WB_AXIS", "AXIS_WB_WB", "WB_WB_AXIS"]
 
         self.wb_slave_control = wishbone.Interface(data_width=32, adr_width=30)
         verilog_filename = "FastVDMA_" + config + ".v"
         platform.add_source(os.path.join(os.path.abspath(os.path.dirname(__file__)), "generated", verilog_filename), language="verilog")
+
+        dma_params = dict()
 
         # Transfer done interrupts
         self.io_irq_readerDone   = Signal()
@@ -33,15 +35,16 @@ class FastVDMA(Module, AutoCSR):
         self.io_sync_readerSync  = Signal()
         self.io_sync_writerSync  = Signal()
 
-        # Indicators whether DMA is running
-        self.io_sync_readerBusy  = Signal()
-        self.io_sync_writerBusy  = Signal()
+        if with_busy_signals:
+            # Indicators whether DMA is running
+            self.io_sync_readerBusy  = Signal()
+            self.io_sync_writerBusy  = Signal()
 
         if config == "AXIS_WB_WB":
             self.axi_stream_reader = axi.AXIStreamInterface(data_width=32, user_width=32)
             self.wb_master_writer = wishbone.Interface(data_width=32, adr_width=30)
 
-            self.specials += Instance("DMATop_AXIS_WB_WB",
+            dma_params.update(
                 i_clock                 = ClockSignal(),
                 i_reset                 = ResetSignal(),
 
@@ -76,15 +79,12 @@ class FastVDMA(Module, AutoCSR):
 
                 i_io_sync_readerSync    = self.io_sync_readerSync,
                 i_io_sync_writerSync    = self.io_sync_writerSync,
-
-                o_io_sync_readerBusy    = self.io_sync_readerBusy,
-                o_io_sync_writerBusy    = self.io_sync_writerBusy,
             )
         elif config == "AXIS_WB_AXIS":
             self.axi_stream_reader = axi.AXIStreamInterface(data_width=32, user_width=32)
             self.axi_stream_writer = axi.AXIStreamInterface(data_width=32, user_width=32)
 
-            self.specials += Instance("DMATop_AXIS_WB_AXIS",
+            dma_params.update(
                 i_clock                 = ClockSignal(),
                 i_reset                 = ResetSignal(),
 
@@ -115,15 +115,12 @@ class FastVDMA(Module, AutoCSR):
 
                 i_io_sync_readerSync    = self.io_sync_readerSync,
                 i_io_sync_writerSync    = self.io_sync_writerSync,
-
-                o_io_sync_readerBusy    = self.io_sync_readerBusy,
-                o_io_sync_writerBusy    = self.io_sync_writerBusy,
             )
         elif config == "WB_WB_AXIS":
             self.wb_master_reader = wishbone.Interface(data_width=32, adr_width=30)
             self.axi_stream_writer = axi.AXIStreamInterface(data_width=32, user_width=32)
 
-            self.specials += Instance("DMATop_WB_WB_AXIS",
+            dma_params.update(
                 i_clock                 = ClockSignal(),
                 i_reset                 = ResetSignal(),
 
@@ -158,10 +155,17 @@ class FastVDMA(Module, AutoCSR):
 
                 i_io_sync_readerSync    = self.io_sync_readerSync,
                 i_io_sync_writerSync    = self.io_sync_writerSync,
+            )
 
+        if with_busy_signals:
+            dma_params.update(
                 o_io_sync_readerBusy    = self.io_sync_readerBusy,
                 o_io_sync_writerBusy    = self.io_sync_writerBusy,
             )
+
+        if name == "DMATop_":
+            name += config
+        self.specials += Instance(name, **dma_params)
 
         # Connect interrupts with EventManager
         self.submodules.ev = EventManager()
