@@ -11,7 +11,9 @@ ifneq '$(TARGET)' 'digilent_arty'
 	$(error Target $(TARGET) is not supported.)
 endif
 
-.PHONY: software program bitstream upload litex-software setup-litex setup-zephyr clean clean-software clean-bitstream
+.PHONY: all software program bitstream upload litex-software setup-litex setup-zephyr clean clean-software clean-bitstream
+
+all: software bitstream
 
 software:
 	pushd $(PROJ_ROOT)/software/video-overlays-zephyr-app &&\
